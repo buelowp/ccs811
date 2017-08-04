@@ -1,50 +1,52 @@
-/*
- * CCS811.h
- *
- *  Created on: Jul 23, 2017
- *      Author: pete
- */
+#ifndef __CCS811_H__
+#define __CCS811_H__
 
-#ifndef CCS811_H_
-#define CCS811_H_
-
+#include <onion-i2c.h>
 #include <cstdint>
-#include "CCS811Core.h"
+#include <cstdio>
+#include <unistd.h>
+#include <time.h>
 
-class CCS811 : public CCS811Core {
-public:
-	CCS811( uint8_t );
+#include "LocalGpio.h"
 
-	//Call to check for errors, start app, and set default mode 1
-	status begin( void );
+#define nWAKE           4      // pin 4 is tied to CCS811 nWAKE pin in sensor node
+#define nINT            7      // pin 7 is tied to CCS811 nINT pin in sensor node
 
-	status readAlgorithmResults( void );
-	bool checkForStatusError( void );
-	bool dataAvailable( void );
-	bool appValid( void );
-	uint8_t getErrorRegister( void );
-	uint16_t getBaseline( void );
-	status setBaseline( uint16_t );
-	status enableInterrupts( void );
-	status disableInterrupts( void );
-	status setDriveMode( uint8_t mode );
-	status setEnvironmentalData( float relativeHumidity, float temperature );
-	void setRefResistance( float );
-	status readNTC( void );
-	uint16_t getTVOC( void );
-	uint16_t getCO2( void );
-	float getResistance( void );
-	float getTemperature( void );
+//#define ADDR            0x5A   // when I2C_ADDR pin is LOW
+#define ADDR            0x5B   // when I2C_ADDR pin is HIGH
 
-private:
-	//These are the air quality values obtained from the sensor
-	float refResistance;
-	float resistance;
-	uint16_t tVOC;
-	uint16_t CO2;
-	uint16_t vrefCounts = 0;
-	uint16_t ntcCounts = 0;
-	float temperature;
+// Registers for CCS811
+#define STATUS          0x00
+#define MEAS_MODE       0x01
+#define ALG_RESULT_DATA 0x02
+#define ENV_DATA        0x05
+#define APP_START       0xF4
+#define HW_ID           0x20
+#define ERROR_ID        0xE0
+#define SW_RESET        0xFF
+
+class CCS811
+{
+  public:
+    CCS811(int, uint8_t);     // constructor
+    bool begin();
+    uint8_t readStatus(void);
+    uint8_t readHW_ID(void);
+    uint8_t readErrorID(uint8_t _status);
+    int readTVOC(void);
+    int readCO2(void);
+    void getData(void);
+    void compensate(float t, float rh);
+    void _digitalWrite(int);
+    void reset(void);
+    void sleep();
+    int TVOC, CO2;
+
+  private:
+    void localSleep(int, int);
+
+    uint8_t m_addr;
+    LocalGpio *m_gpio;
 };
 
-#endif /* CCS811_H_ */
+#endif
